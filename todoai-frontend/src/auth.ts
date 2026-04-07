@@ -65,6 +65,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         } catch (err) {
           console.error("Backend token refresh failed:", err);
+          token.backendAccessToken = undefined;
+          token.backendRefreshToken = undefined;
+          token.backendTokenExpiresAt = undefined;
         }
       }
 

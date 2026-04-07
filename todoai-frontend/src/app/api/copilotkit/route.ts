@@ -1,23 +1,35 @@
-import { CopilotRuntime, EmptyAdapter, copilotRuntimeNextJSAppRouterEndpoint } from "@copilotkit/runtime";
+import {
+  CopilotRuntime,
+  EmptyAdapter,
+  copilotRuntimeNextJSAppRouterEndpoint,
+} from "@copilotkit/runtime";
 import { AbstractAgent, EventType, type RunAgentInput, type BaseEvent } from "@ag-ui/client";
 import { Observable } from "rxjs";
+import { auth } from "@/auth";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 /**
- * Custom agent that streams responses from the FastAPI backend.
- *
- * CopilotKit v1.54 uses AbstractAgent (@ag-ui/client) as its primary
- * execution model. Providing a custom agent bypasses the built-in LLM
- * provider resolution (which would fail with no API key configured in the
- * frontend) and routes requests directly to our FastAPI streaming endpoint.
+ * Custom agent that proxies chat to the FastAPI streaming endpoint.
+ * Constructed per-request so it carries the caller's JWT token.
  */
 class FastAPIAgent extends AbstractAgent {
+  private accessToken: string;
+
+  constructor(accessToken: string) {
+    super();
+    this.accessToken = accessToken;
+  }
+
+  async refreshToken(): Promise<string | null> {
+    const session = await auth();
+    return session?.backendAccessToken ?? null;
+  }
+
   run(input: RunAgentInput): Observable<BaseEvent> {
     return new Observable((subscriber) => {
       const execute = async () => {
-        // Find the most recent user message to use as the query
         const messages = input.messages ?? [];
         const lastUserMsg = [...messages]
           .reverse()
@@ -37,7 +49,20 @@ class FastAPIAgent extends AbstractAgent {
         } as BaseEvent);
 
         const url = `${BACKEND_URL}/ai/stream-answer?query=${encodeURIComponent(query)}`;
-        const response = await fetch(url);
+        let response = await fetch(url, {
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+        });
+
+        // If the token was stale/expired, refresh and retry once
+        if (response.status === 401) {
+          const freshToken = await this.refreshToken();
+          if (freshToken) {
+            this.accessToken = freshToken;
+            response = await fetch(url, {
+              headers: { Authorization: `Bearer ${freshToken}` },
+            });
+          }
+        }
 
         if (!response.ok || !response.body) {
           throw new Error(`Backend returned ${response.status} for ${url}`);
@@ -69,17 +94,22 @@ class FastAPIAgent extends AbstractAgent {
   }
 }
 
-const runtime = new CopilotRuntime({
-  // Providing a default agent prevents the runtime from creating a BuiltInAgent
-  // (which would fail resolving a provider/model/API key from EmptyAdapter).
-  agents: { default: new FastAPIAgent() },
-});
-
 export const POST = async (req: Request) => {
+  // Read the token from the server-side session so it's always fresh
+  // (NextAuth runs the JWT callback — including token refresh — on every auth() call).
+  const session = await auth();
+  const accessToken = session?.backendAccessToken ?? null;
+
+  if (!accessToken) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const runtime = new CopilotRuntime({
+    agents: { default: new FastAPIAgent(accessToken) },
+  });
+
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,
-    // EmptyAdapter satisfies the type requirement; actual work is done
-    // by FastAPIAgent so the adapter's process() is never invoked.
     serviceAdapter: new EmptyAdapter(),
     endpoint: "/api/copilotkit",
   });

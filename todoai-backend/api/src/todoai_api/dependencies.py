@@ -1,3 +1,4 @@
+import uuid
 from typing import Generator
 
 from fastapi import Depends, HTTPException, status
@@ -39,11 +40,12 @@ def get_current_user(
             settings.secret_key,
             algorithms=[settings.algorithm],
         )
-        user_id: str | None = payload.get("sub")
+        user_id_str: str | None = payload.get("sub")
         token_type: str = payload.get("type", "access")
-        if user_id is None or token_type != "access":
+        if user_id_str is None or token_type != "access":
             raise credentials_exception
-    except JWTError:
+        user_id = uuid.UUID(user_id_str)
+    except (JWTError, ValueError):
         raise credentials_exception
 
     user = db.get(User, user_id)
