@@ -11,8 +11,9 @@ def get_llm(api_key: str) -> ChatAnthropic:
     )
 
 
-async def stream_answer(api_key: str, query: str) -> AsyncIterator[str]:
+async def stream_answer(api_key: str, query: str, user_id: str) -> AsyncIterator[str]:
     llm = get_llm(api_key)
+    print(f"LLM is processing query for user {user_id}...")
     async for chunk in llm.astream([HumanMessage(content=query)]):
         if chunk.content:
             yield chunk.content
