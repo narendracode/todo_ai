@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Externalize CopilotKit runtime and its transitive deps from webpack bundling
+  // (avoids pkce-challenge / MCP SDK export resolution issues on the server)
+  serverExternalPackages: ["@copilotkit/runtime"],
   webpack(config, { isServer }) {
     // @event-calendar packages are pre-compiled Svelte components.
     // Strip the "svelte" export condition so webpack resolves the compiled

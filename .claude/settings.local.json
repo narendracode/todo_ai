@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(wait)",
+      "Bash(node -e \"const r = require\\('@copilotkit/runtime'\\); console.log\\(Object.keys\\(r\\).filter\\(k => k.toLowerCase\\(\\).includes\\('anthropic'\\) || k.toLowerCase\\(\\).includes\\('handler'\\) || k.toLowerCase\\(\\).includes\\('runtime'\\)\\)\\)\")",
+      "Bash(node:*)",
+      "Bash(ls node_modules/@copilotkit/react-ui/dist/*.css)",
+      "Bash(npx tsc:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx next:*)",
+      "Bash(ls:*)",
+      "Bash(make help:*)",
+      "Bash(make db-start:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3 - \"todoai-backend/api/.env\" \".db-remote-url\")",
+      "Bash(grep -o 'eventStream\\\\$\\\\.\\\\w*')",
+      "Bash(grep -r \"isTextMessage\\\\|TextMessage\" node_modules/@copilotkit/runtime/dist/*.d.ts)",
+      "Bash(xargs cat:*)"
+    ]
+  }
+}
