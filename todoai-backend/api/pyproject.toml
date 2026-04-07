@@ -16,10 +16,12 @@ dependencies = [
     "python-multipart>=0.0.9",
     "email-validator>=2.1",
     "python-dateutil>=2.9",
+    "todoai-ai",
 ]
 
 [tool.uv.sources]
 todoai-common = { workspace = true }
+todoai-ai = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/todoai_api"]

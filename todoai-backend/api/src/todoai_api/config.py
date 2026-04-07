@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
     google_client_id: str
+    anthropic_api_key: str
 
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),
