@@ -6,6 +6,7 @@ from todoai_ai.tools.join_waitinglist_tool import JoinWaitingListTool
 from todoai_ai.tools.save_booking_tool import SaveBookingTool
 from todoai_ai.tools.table_availability_tool import GetTableAvailabilityTool
 import json
+from pathlib import Path
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, END
@@ -66,6 +67,11 @@ async def chat(agent_chat_request: AgentChatRequest, api_key: str):
     graph_builder.add_edge("tools", "agent")
 
     agent = graph_builder.compile(checkpointer=memory)
+
+    # graph_png = agent.get_graph().draw_mermaid_png()
+    # output_path = Path(__file__).with_name("reservation.png")
+    # print(f"Saving agent graph visualization to {output_path}")
+    # output_path.write_bytes(graph_png)
 
     async def generate():
         async for chunk in agent.astream(
