@@ -1,7 +1,6 @@
 from collections.abc import AsyncIterator
 
 from todoai_ai.schemas import AgentChatRequest
-from todoai_ai.utils import format_chat_history
 from todoai_ai.tools.current_date_tools import CurrentTimeTool
 from todoai_ai.tools.join_waitinglist_tool import JoinWaitingListTool
 from todoai_ai.tools.save_booking_tool import SaveBookingTool
@@ -9,10 +8,12 @@ from todoai_ai.tools.table_availability_tool import GetTableAvailabilityTool
 import json
 
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.prebuilt import create_react_agent
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import MessagesState
+from langgraph.prebuilt import ToolNode
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 
 
@@ -39,13 +40,32 @@ async def chat(agent_chat_request: AgentChatRequest, api_key: str):
     model = get_llm(api_key)
 
     tools = [CurrentTimeTool(), JoinWaitingListTool(), SaveBookingTool(), GetTableAvailabilityTool()]
-    agent = create_react_agent(
-        model=model,
-        tools=tools,
-        prompt="""You are an AI agent to helps users book tables at restaurants and provide information about restraurants.
-    Never assume any value, try to use the tools otherwise always ask for clarity if the request is ambiguous.""",
-        checkpointer=memory
-    )
+    model_with_tools = model.bind_tools(tools)
+
+    system_prompt = """You are an AI agent to helps users book tables at restaurants and provide information about restraurants.
+    Never assume any value, try to use the tools otherwise always ask for clarity if the request is ambiguous."""
+
+    def should_continue(state: MessagesState):
+        last_message = state["messages"][-1]
+        if last_message.tool_calls:
+            return "tools"
+        return END
+
+    async def call_model(state: MessagesState):
+        messages = [SystemMessage(content=system_prompt)] + state["messages"]
+        response = await model_with_tools.ainvoke(messages)
+        return {"messages": [response]}
+
+    tool_node = ToolNode(tools)
+
+    graph_builder = StateGraph(MessagesState)
+    graph_builder.add_node("agent", call_model)
+    graph_builder.add_node("tools", tool_node)
+    graph_builder.set_entry_point("agent")
+    graph_builder.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
+    graph_builder.add_edge("tools", "agent")
+
+    agent = graph_builder.compile(checkpointer=memory)
 
     async def generate():
         async for chunk in agent.astream(
