@@ -17,6 +17,13 @@ _SessionLocal = get_session_factory(_engine)
 bearer_scheme = HTTPBearer()
 
 
+def get_access_token(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> str:
+    """Extract the raw JWT string from the Authorization header."""
+    return credentials.credentials
+
+
 def get_db() -> Generator[Session, None, None]:
     db = _SessionLocal()
     try:

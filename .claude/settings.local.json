@@ -16,7 +16,12 @@
       "Bash(python3 - \"todoai-backend/api/.env\" \".db-remote-url\")",
       "Bash(grep -o 'eventStream\\\\$\\\\.\\\\w*')",
       "Bash(grep -r \"isTextMessage\\\\|TextMessage\" node_modules/@copilotkit/runtime/dist/*.d.ts)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(uv sync:*)",
+      "Bash(python:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(/Users/narendra/Projects/AI/task_scheduling/todoai-backend/.venv/bin/python -c \"import sys; print\\('\\\\n'.join\\(sys.path\\)\\)\")",
+      "Bash(uv run:*)"
     ]
   }
 }

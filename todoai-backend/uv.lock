@@ -1811,6 +1811,7 @@ name = "todoai-ai"
 version = "0.1.0"
 source = { editable = "ai" }
 dependencies = [
+    { name = "httpx" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-community" },
@@ -1827,6 +1828,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
     { name = "langchain", specifier = ">=1.2.15" },
     { name = "langchain-anthropic", specifier = ">=0.3" },
     { name = "langchain-community", specifier = ">=0.4.1" },

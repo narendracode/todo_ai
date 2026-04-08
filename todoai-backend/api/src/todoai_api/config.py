@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
     google_client_id: str
     anthropic_api_key: str
+    api_base_url: str = "http://localhost:8000/api/v1"
 
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),
