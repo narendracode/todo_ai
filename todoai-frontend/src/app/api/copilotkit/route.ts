@@ -48,19 +48,25 @@ class FastAPIAgent extends AbstractAgent {
           role: "assistant",
         } as BaseEvent);
 
-        const url = `${BACKEND_URL}/ai/stream-answer?query=${encodeURIComponent(query)}`;
-        let response = await fetch(url, {
-          headers: { Authorization: `Bearer ${this.accessToken}` },
+        const url = `${BACKEND_URL}/ai/stream-chat`;
+        const body = JSON.stringify({ query, chat_history: [], user_id: "" });
+        const fetchOptions = (token: string) => ({
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body,
         });
+
+        let response = await fetch(url, fetchOptions(this.accessToken));
 
         // If the token was stale/expired, refresh and retry once
         if (response.status === 401) {
           const freshToken = await this.refreshToken();
           if (freshToken) {
             this.accessToken = freshToken;
-            response = await fetch(url, {
-              headers: { Authorization: `Bearer ${freshToken}` },
-            });
+            response = await fetch(url, fetchOptions(freshToken));
           }
         }
 
@@ -70,17 +76,31 @@ class FastAPIAgent extends AbstractAgent {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          if (chunk) {
-            subscriber.next({
-              type: EventType.TEXT_MESSAGE_CONTENT,
-              messageId,
-              delta: chunk,
-            } as BaseEvent);
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete NDJSON lines
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? ""; // keep incomplete trailing line in buffer
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.type === "answer" && parsed.content) {
+                subscriber.next({
+                  type: EventType.TEXT_MESSAGE_CONTENT,
+                  messageId,
+                  delta: parsed.content,
+                } as BaseEvent);
+              }
+            } catch {
+              // skip malformed lines
+            }
           }
         }
 
