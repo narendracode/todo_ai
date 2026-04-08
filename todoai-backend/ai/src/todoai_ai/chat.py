@@ -5,6 +5,7 @@ from todoai_ai.tools.current_date_tools import CurrentTimeTool
 from todoai_ai.tools.join_waitinglist_tool import JoinWaitingListTool
 from todoai_ai.tools.save_booking_tool import SaveBookingTool
 from todoai_ai.tools.table_availability_tool import GetTableAvailabilityTool
+from todoai_ai.tools.get_bookings_tool import GetBookingsTool
 import json
 from pathlib import Path
 
@@ -40,10 +41,10 @@ async def chat(agent_chat_request: AgentChatRequest, api_key: str):
 
     model = get_llm(api_key)
 
-    tools = [CurrentTimeTool(), JoinWaitingListTool(), SaveBookingTool(), GetTableAvailabilityTool()]
+    tools = [CurrentTimeTool(), JoinWaitingListTool(), SaveBookingTool(), GetTableAvailabilityTool(), GetBookingsTool()]
     model_with_tools = model.bind_tools(tools)
 
-    system_prompt = """You are an AI agent to helps users book tables at restaurants and provide information about restraurants.
+    system_prompt = """You are an AI agent to helps users book tables at restaurants and provide information about restraurants and past table bookings.
     Never assume any value, try to use the tools otherwise always ask for clarity if the request is ambiguous."""
 
     def should_continue(state: MessagesState):
