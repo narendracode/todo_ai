@@ -60,11 +60,11 @@ async def chat(agent_chat_request: AgentChatRequest, api_key: str):
     tool_node = ToolNode(tools)
 
     graph_builder = StateGraph(MessagesState)
-    graph_builder.add_node("agent", call_model)
+    graph_builder.add_node("assistant", call_model)
     graph_builder.add_node("tools", tool_node)
-    graph_builder.set_entry_point("agent")
-    graph_builder.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
-    graph_builder.add_edge("tools", "agent")
+    graph_builder.set_entry_point("assistant")
+    graph_builder.add_conditional_edges("assistant", should_continue, {"tools": "tools", END: END})
+    graph_builder.add_edge("tools", "assistant")
 
     agent = graph_builder.compile(checkpointer=memory)
 
@@ -80,8 +80,8 @@ async def chat(agent_chat_request: AgentChatRequest, api_key: str):
             stream_mode="updates",
         ):
             try:
-                if "agent" in chunk:
-                    message = chunk["agent"]["messages"][0]
+                if "assistant" in chunk:
+                    message = chunk["assistant"]["messages"][0]
                     # Extract text content (handles both str and list-of-blocks from Anthropic)
                     text_content = ""
                     if isinstance(message.content, str):
